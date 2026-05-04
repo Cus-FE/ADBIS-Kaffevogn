@@ -1,16 +1,63 @@
-# React + Vite
+# KaffeVogn
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+En React-webapp hvor brugere kan finde kaffevogne på et interaktivt kort i København.
 
-Currently, two official plugins are available:
+## Teknologi
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** med Vite
+- **React-Leaflet** — interaktivt kort 
+- **Mock data** — ingen backend, al data er defineret i `src/data/mockData.js`
 
-## React Compiler
+## Krav
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- [Node.js](https://nodejs.org/) version 18 eller nyere
 
-## Expanding the ESLint configuration
+## Installation og opstart
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Klon eller download repositoriet
+
+2. Gå ind i projektmappen:
+   ```
+   cd kaffevogn-web
+   ```
+
+3. Installér afhængigheder:
+   ```
+   npm install
+   ```
+
+4. Start udviklingsserveren:
+   ```
+   npm run dev
+   ```
+
+5. Åbn [http://localhost:5173](http://localhost:5173) i din browser
+
+> Der kræves ingen API-nøgler eller miljøvariabler. Appen kører direkte efter `npm install`.
+
+## Login
+
+Brug følgende testbruger til at logge ind:
+
+| Felt | Værdi |
+|---|---|
+| Email | frederik@example.dk |
+| Adgangskode | 1234 |
+
+## Funktioner
+
+- **Kortside** — se 7 kaffevogne placeret på et kort over København med filtre (Alle / Åbne nu / Planlagte)
+- **Vognpanel** — klik på en pin for at se vognnavn, menu, priser og åbningstider
+- **Favoritter** — gem og fjern favoritvogne, Frederik har 2 forudindstillede favoritter
+- **Login** — simpel prototype-login uden backend
+
+## Projektstruktur
+
+```
+src/
+├── assets/         Billeder (hero-foto på login-siden)
+├── components/     Genanvendelige komponenter (Sidebar, VognPanel, Badge)
+├── data/           Mock-data med 7 kaffevogne og én testbruger
+├── models/         OOP-klasser (Kaffevogn, Kunde, Menu, Koordinat m.fl.)
+└── pages/          Sider (LoginPage, KortPage, FavoritterPage)
+```
