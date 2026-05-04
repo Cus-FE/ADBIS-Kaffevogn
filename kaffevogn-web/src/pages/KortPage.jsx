@@ -6,10 +6,7 @@ import { mockVogne, mockKortvisning } from '../data/mockData';
 
 const C = { primary:'#C8603A', white:'#FFFFFF', textDk:'#1C1410', textGray:'#6B6560', border:'#EDE8E3', bg:'#FAFAF8', amberLight:'#FDF3ED' };
 
-function nuTidspunkt() {
-  const n = new Date();
-  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
-}
+const DEMO_TID = '12:00';
 
 export default function KortPage({ bruger, onFavorit, focusVogn }) {
   const mapRef = useRef(null);
@@ -18,8 +15,9 @@ export default function KortPage({ bruger, onFavorit, focusVogn }) {
   const [valgteVogn, setValgteVogn] = useState(null);
   const [filter, setFilter] = useState('alle');
   const [søgning, setSøgning] = useState('');
-  const [valgtTid, setValgtTid] = useState(nuTidspunkt());
-  const [brugNuTid, setBrugNuTid] = useState(true); // true = brug aktuel tid
+  const [søgningFokus, setSøgningFokus] = useState(false);
+  const [valgtTid, setValgtTid] = useState(DEMO_TID);
+  const brugNuTid = false;
 
   useEffect(() => {
     if (leafletMap.current) return;
@@ -48,16 +46,17 @@ export default function KortPage({ bruger, onFavorit, focusVogn }) {
     Object.values(markersRef.current).forEach(m => m.remove());
     markersRef.current = {};
 
-    const tidspunkt = brugNuTid ? nuTidspunkt() : valgtTid;
+    const tidspunkt = valgtTid;
 
     mockKortvisning.setFilter(filter);
     let visVogne = mockKortvisning.hentFilteredVogne().filter(v =>
       !søgning || v.navn.toLowerCase().includes(søgning.toLowerCase())
     );
 
-    // Tidsbaseret filtrering: "Åbne nu" bruger det valgte tidspunkt
+    // Tidsbaseret filtrering: "Åbne nu" viser kun aktive vogne inden for åbningstid
     if (filter === 'aaben') {
       visVogne = mockVogne.filter(v =>
+        v.status === 'aktiv' &&
         v.erÅbenKl(tidspunkt) &&
         (!søgning || v.navn.toLowerCase().includes(søgning.toLowerCase()))
       );
@@ -92,7 +91,7 @@ export default function KortPage({ bruger, onFavorit, focusVogn }) {
       className: '', iconSize: [14,14], iconAnchor: [7,7]
     });
     L.marker([55.6761, 12.5683], { icon: userIcon }).addTo(leafletMap.current);
-  }, [filter, søgning, valgteVogn, valgtTid, brugNuTid]);
+  }, [filter, søgning, valgteVogn, valgtTid]);
 
   const filters = [
     { id: 'alle', label: 'Alle' },
@@ -111,30 +110,40 @@ export default function KortPage({ bruger, onFavorit, focusVogn }) {
       {/* Topbar */}
       <div style={{padding:'10px 16px',background:C.white,borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:12,zIndex:50}}>
         <div style={{position:'relative',flex:1,maxWidth:340}}>
-          <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:15}}>🔍</span>
+          <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:15,zIndex:1}}>🔍</span>
           <input value={søgning} onChange={e=>setSøgning(e.target.value)} placeholder="Søg efter kaffevogn..."
-            style={{width:'100%',padding:'9px 12px 9px 36px',borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13,color:C.textDk,background:C.bg,outline:'none',fontFamily:'Inter,sans-serif'}}
-            onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}/>
+            style={{width:'100%',padding:'9px 12px 9px 36px',borderRadius:10,border:`1.5px solid ${søgningFokus?C.primary:C.border}`,fontSize:13,color:C.textDk,background:C.bg,outline:'none',fontFamily:'Inter,sans-serif'}}
+            onFocus={()=>setSøgningFokus(true)}
+            onBlur={()=>setTimeout(()=>setSøgningFokus(false),150)}/>
+          {søgning && søgningFokus && (() => {
+            const resultater = mockVogne.filter(v => v.status !== 'inaktiv' && v.navn.toLowerCase().includes(søgning.toLowerCase()));
+            return resultater.length > 0 ? (
+              <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:C.white,border:`1.5px solid ${C.border}`,borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',zIndex:200,overflow:'hidden'}}>
+                {resultater.map(v => (
+                  <div key={v.id}
+                    onMouseDown={()=>{ setValgteVogn(v); setSøgning(''); if(leafletMap.current) leafletMap.current.setView([v.placering.koordinat.lat,v.placering.koordinat.lng],15); }}
+                    style={{padding:'10px 14px',cursor:'pointer',fontSize:13,color:C.textDk,borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.amberLight}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <span>{v.navn}</span>
+                    <span style={{fontSize:11,color:C.textGray}}>{v.placering.adresse.split(',')[1]?.trim()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:C.white,border:`1.5px solid ${C.border}`,borderRadius:10,padding:'10px 14px',fontSize:13,color:C.textGray,zIndex:200}}>
+                Ingen resultater
+              </div>
+            );
+          })()}
         </div>
         <div style={{display:'flex',gap:8}}>
           {filters.map(f => <button key={f.id} onClick={()=>setFilter(f.id)} style={chipStyle(f.id)}>{f.label}</button>)}
         </div>
 
-        {/* Tidspicker */}
-        <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',padding:'6px 12px',borderRadius:20,border:`1.5px solid ${C.border}`,background:brugNuTid?C.white:C.amberLight}}>
-          <span style={{fontSize:13}}>🕐</span>
-          <input
-            type="time"
-            value={valgtTid}
-            onChange={e => { setValgtTid(e.target.value); setBrugNuTid(false); }}
-            style={{border:'none',outline:'none',fontSize:13,fontFamily:'Inter,sans-serif',color:brugNuTid?C.textGray:C.primary,fontWeight:brugNuTid?400:600,background:'transparent',cursor:'pointer',width:80}}
-          />
-          {!brugNuTid && (
-            <button onClick={() => { setBrugNuTid(true); setValgtTid(nuTidspunkt()); }}
-              style={{fontSize:11,color:C.primary,background:'none',border:'none',cursor:'pointer',fontWeight:600,padding:'0 2px',fontFamily:'Inter,sans-serif'}}>
-              Nu ↺
-            </button>
-          )}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:'auto',padding:'6px 12px',borderRadius:20,border:`1.5px solid ${C.border}`,background:C.white,color:C.textGray,fontSize:13}}>
+          <span>🕐</span>
+          <span>{valgtTid}</span>
         </div>
       </div>
 
@@ -143,8 +152,8 @@ export default function KortPage({ bruger, onFavorit, focusVogn }) {
         <div ref={mapRef} style={{flex:1}}/>
         {valgteVogn && (
           <VognPanel vogn={valgteVogn} bruger={bruger} onClose={()=>setValgteVogn(null)}
-            valgtTid={brugNuTid ? nuTidspunkt() : valgtTid}
-            onFavorit={(id)=>{ onFavorit(id); setValgteVogn(v=>({...v})); }}/>
+            valgtTid={valgtTid}
+            onFavorit={onFavorit}/>
         )}
       </div>
     </div>
